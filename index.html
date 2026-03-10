@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contacts Pane - SolidPanes</title>
+  <meta name="description" content="Manage your address book with linked data contacts on the decentralized web.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Contacts Pane">
+  <meta property="og:description" content="Manage your address book with linked data contacts on the decentralized web.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://solidpanes.com/contacts/">
+  <meta property="og:image" content="https://solidproject.org/image/logo.svg">
+  <meta property="og:site_name" content="SolidPanes">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Contacts Pane - SolidPanes">
+  <meta name="twitter:description" content="Manage your address book with linked data contacts on the decentralized web.">
+  <meta name="twitter:image" content="https://solidproject.org/image/logo.svg">
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #eee; }
+
+    .db-header {
+      background: linear-gradient(135deg, #7C4DFF 0%, #536DFE 100%);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .db-header a {
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+    .db-url-bar {
+      flex: 1;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      color: #333;
+      font-family: inherit;
+    }
+    .db-browse-btn {
+      background: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #7C4DFF;
+      cursor: pointer;
+    }
+    .db-status {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.85rem;
+      color: #666;
+      background: #f8f8f8;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .db-pane-card {
+      max-width: 900px;
+      margin: 1.5rem auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .db-pane-tabs {
+      padding: 0.75rem 1rem 0;
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+    .db-pane-tab {
+      width: 28px;
+      height: 28px;
+      opacity: 0.5;
+      cursor: pointer;
+    }
+    .db-pane-tab.active { opacity: 1; }
+    .db-pane-body { padding: 1rem 1.5rem 1.5rem; }
+
+    /* Contacts pane styles */
+    .contacts-container {
+      display: flex;
+      min-height: 480px;
+      gap: 0;
+    }
+    .contacts-sidebar {
+      width: 280px;
+      min-width: 280px;
+      border-right: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+    }
+    .contacts-search { padding: 0.75rem; }
+    .contacts-search-input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .contacts-search-input:focus { outline: 2px solid #7C4DFF; border-color: transparent; }
+    .contacts-groups { padding: 0 0.75rem 0.5rem; border-bottom: 1px solid #eee; }
+    .contacts-groups-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin: 0 0 0.4rem;
+    }
+    .contacts-groups-list { list-style: none; margin: 0; padding: 0; }
+    .contacts-group-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .contacts-group-item:hover { background: #f5f5f5; }
+    .contacts-group-item[aria-selected="true"] { background: #7C4DFF; color: white; }
+    .contacts-group-count { opacity: 0.6; font-size: 0.85rem; }
+    .contacts-list-container { flex: 1; overflow-y: auto; }
+    .contacts-list { list-style: none; margin: 0; padding: 0; }
+    .contacts-list-header {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #999;
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+    }
+    .contacts-list-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .contacts-list-item:hover { background: #f9f9f9; }
+    .contacts-list-item[aria-selected="true"] { background: #ede7f6; }
+    .contacts-avatar {
+      width: 36px;
+      height: 36px;
+      background: #e0e0e0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .contacts-list-name { font-weight: 500; font-size: 0.9rem; }
+    .contacts-list-org { font-size: 0.8rem; color: #888; }
+    .contacts-toolbar {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid #eee;
+    }
+    .contacts-add-btn {
+      background: #7C4DFF;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .contacts-add-btn:hover { background: #6a3de8; }
+
+    /* Detail panel */
+    .contacts-detail {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    .contacts-detail-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #999;
+      font-style: italic;
+    }
+    .contacts-detail-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 1.25rem;
+    }
+    .contacts-detail-avatar {
+      width: 72px;
+      height: 72px;
+      background: #e0e0e0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .contacts-detail-title { flex: 1; }
+    .contacts-detail-name { margin: 0 0 0.2rem; font-size: 1.4rem; }
+    .contacts-detail-org { margin: 0; color: #888; }
+    .contacts-action-btn {
+      border: 1px solid #ddd;
+      background: white;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .contacts-action-btn:hover { background: #f5f5f5; }
+    .contacts-fields { margin: 0; }
+    .contacts-field-group {
+      display: flex;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .contacts-field-label {
+      width: 80px;
+      color: #999;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .contacts-field-value { margin: 0; }
+    .contacts-field-value a { color: #7C4DFF; text-decoration: none; }
+    .contacts-field-value a:hover { text-decoration: underline; }
+    .contacts-social {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+    .contacts-social-link {
+      font-size: 1.2rem;
+      text-decoration: none;
+    }
+    .contacts-live-region {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+    }
+
+    footer {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1rem;
+      text-align: center;
+      color: #999;
+      font-size: 0.8rem;
+    }
+    footer a { color: #7C4DFF; text-decoration: none; }
+
+    @media (max-width: 640px) {
+      .contacts-container { flex-direction: column; min-height: auto; }
+      .contacts-sidebar { width: 100%; min-width: auto; border-right: none; border-bottom: 1px solid #eee; }
+      .contacts-list-container { max-height: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="db-header">
+    <a href="https://solidpanes.com">SolidPanes</a>
+    <input class="db-url-bar" id="urlBar" value="https://pod.example/contacts/" readonly>
+    <button class="db-browse-btn" onclick="location.reload()">Browse</button>
+  </div>
+  <div class="db-status">
+    Logged in as: <span style="font-family: monospace;">https://alice.pod.example/profile/card#me</span>
+  </div>
+
+  <div class="db-pane-card">
+    <div class="db-pane-tabs">
+      <img class="db-pane-tab active" src="https://solidos.github.io/solid-ui/src/icons/noun_15695.svg" alt="Contacts pane" title="contacts">
+      <img class="db-pane-tab" src="https://solidos.github.io/solid-ui/src/icons/noun_109873.svg" alt="Source pane" title="source">
+    </div>
+    <div class="db-pane-body" id="paneBody"></div>
+  </div>
+
+  <footer>
+    <a href="https://solidpanes.com">&larr; SolidPanes</a> &middot;
+    <a href="https://github.com/solidpanes/contacts">Source</a>
+  </footer>
+
+  <!-- Structured Data Island: Contacts data -->
+  <script type="application/json" id="contacts-data">
+{
+  "groups": [
+    { "id": "all", "name": "All Contacts", "count": 8 },
+    { "id": "work", "name": "Work", "count": 4 },
+    { "id": "friends", "name": "Friends", "count": 3 },
+    { "id": "family", "name": "Family", "count": 1 }
+  ],
+  "contacts": [
+    { "id": 1, "name": "Alice Anderson", "org": "Acme Corp", "email": "alice@acme.example", "phone": "+1 555-0101", "webId": "https://alice.pod.example/profile/card#me", "groups": ["work"] },
+    { "id": 2, "name": "Bob Baker", "org": "Tech Solutions", "email": "bob@tech.example", "phone": "+1 555-0102", "webId": "https://bob.pod.example/profile/card#me", "groups": ["work", "friends"] },
+    { "id": 3, "name": "Carol Chen", "org": "", "email": "carol@example.org", "phone": "+1 555-0103", "webId": "https://carol.pod.example/profile/card#me", "groups": ["friends"] },
+    { "id": 4, "name": "David Diaz", "org": "Acme Corp", "email": "david@acme.example", "phone": "+1 555-0104", "webId": "https://david.pod.example/profile/card#me", "groups": ["work"] },
+    { "id": 5, "name": "Emma Evans", "org": "", "email": "emma@example.org", "phone": "+1 555-0105", "webId": "https://emma.pod.example/profile/card#me", "groups": ["family"] },
+    { "id": 6, "name": "Frank Foster", "org": "StartupXYZ", "email": "frank@startup.example", "phone": "+1 555-0106", "webId": "https://frank.pod.example/profile/card#me", "groups": ["work"] },
+    { "id": 7, "name": "Grace Garcia", "org": "", "email": "grace@example.org", "phone": "+1 555-0107", "webId": "", "groups": ["friends"] },
+    { "id": 8, "name": "Henry Hughes", "org": "Tech Solutions", "email": "henry@tech.example", "phone": "+1 555-0108", "webId": "https://henry.pod.example/profile/card#me", "groups": ["work"] }
+  ]
+}
+  </script>
+
+  <script>
+    var _data = JSON.parse(document.getElementById('contacts-data').textContent)
+    var groups = _data.groups
+    var contacts = _data.contacts
+
+    var selectedGroup = 'all'
+    var selectedContact = 1
+
+    function getInitial (name) {
+      return name.split(' ').map(function (n) { return n.charAt(0) }).join('').substring(0, 2)
+    }
+
+    function getFilteredContacts () {
+      if (selectedGroup === 'all') return contacts
+      return contacts.filter(function (c) { return c.groups.indexOf(selectedGroup) !== -1 })
+    }
+
+    function groupByLetter (contactList) {
+      var grouped = {}
+      contactList.forEach(function (c) {
+        var letter = c.name.charAt(0).toUpperCase()
+        if (!grouped[letter]) grouped[letter] = []
+        grouped[letter].push(c)
+      })
+      return grouped
+    }
+
+    function renderContacts () {
+      var div = document.createElement('div')
+      div.setAttribute('class', 'contacts-container')
+      div.setAttribute('role', 'region')
+      div.setAttribute('aria-label', 'Address book')
+
+      var live = document.createElement('div')
+      live.setAttribute('class', 'contacts-live-region')
+      live.setAttribute('role', 'status')
+      live.setAttribute('aria-live', 'polite')
+      div.appendChild(live)
+
+      // Sidebar
+      var sidebar = document.createElement('aside')
+      sidebar.setAttribute('class', 'contacts-sidebar')
+      sidebar.setAttribute('aria-label', 'Contact navigation')
+
+      var searchDiv = document.createElement('div')
+      searchDiv.setAttribute('class', 'contacts-search')
+      searchDiv.setAttribute('role', 'search')
+      var searchInput = document.createElement('input')
+      searchInput.setAttribute('type', 'search')
+      searchInput.setAttribute('class', 'contacts-search-input')
+      searchInput.setAttribute('placeholder', 'Search contacts...')
+      searchInput.setAttribute('aria-label', 'Search contacts')
+      searchDiv.appendChild(searchInput)
+      sidebar.appendChild(searchDiv)
+
+      var groupsDiv = document.createElement('nav')
+      groupsDiv.setAttribute('class', 'contacts-groups')
+      groupsDiv.setAttribute('aria-label', 'Contact groups')
+
+      var groupsTitle = document.createElement('h3')
+      groupsTitle.setAttribute('class', 'contacts-groups-title')
+      groupsTitle.setAttribute('id', 'groups-heading')
+      groupsTitle.textContent = 'Groups'
+      groupsDiv.appendChild(groupsTitle)
+
+      var groupsList = document.createElement('ul')
+      groupsList.setAttribute('class', 'contacts-groups-list')
+      groupsList.setAttribute('role', 'listbox')
+      groupsList.setAttribute('aria-labelledby', 'groups-heading')
+
+      groups.forEach(function (g) {
+        var li = document.createElement('li')
+        li.setAttribute('class', 'contacts-group-item')
+        li.setAttribute('role', 'option')
+        li.setAttribute('tabindex', '0')
+        li.setAttribute('aria-selected', selectedGroup === g.id ? 'true' : 'false')
+        li.setAttribute('data-group', g.id)
+
+        var nameSpan = document.createElement('span')
+        nameSpan.textContent = g.name
+        li.appendChild(nameSpan)
+
+        var countSpan = document.createElement('span')
+        countSpan.setAttribute('class', 'contacts-group-count')
+        countSpan.setAttribute('aria-label', g.count + ' contacts')
+        countSpan.textContent = g.count
+        li.appendChild(countSpan)
+
+        groupsList.appendChild(li)
+      })
+
+      groupsDiv.appendChild(groupsList)
+      sidebar.appendChild(groupsDiv)
+
+      var listContainer = document.createElement('div')
+      listContainer.setAttribute('class', 'contacts-list-container')
+
+      var list = document.createElement('ul')
+      list.setAttribute('class', 'contacts-list')
+      list.setAttribute('role', 'listbox')
+      list.setAttribute('aria-label', 'Contact list')
+
+      var grouped = groupByLetter(getFilteredContacts())
+      Object.keys(grouped).sort().forEach(function (letter) {
+        var headerLi = document.createElement('li')
+        headerLi.setAttribute('class', 'contacts-list-header')
+        headerLi.setAttribute('role', 'presentation')
+        headerLi.setAttribute('aria-hidden', 'true')
+        headerLi.textContent = letter
+        list.appendChild(headerLi)
+
+        grouped[letter].forEach(function (contact) {
+          var li = document.createElement('li')
+          li.setAttribute('class', 'contacts-list-item')
+          li.setAttribute('role', 'option')
+          li.setAttribute('tabindex', '0')
+          li.setAttribute('aria-selected', selectedContact === contact.id ? 'true' : 'false')
+          li.setAttribute('data-contact', contact.id)
+
+          var avatar = document.createElement('span')
+          avatar.setAttribute('class', 'contacts-avatar')
+          avatar.setAttribute('role', 'img')
+          avatar.setAttribute('aria-hidden', 'true')
+          avatar.textContent = getInitial(contact.name)
+          li.appendChild(avatar)
+
+          var info = document.createElement('div')
+          info.setAttribute('class', 'contacts-list-info')
+
+          var name = document.createElement('div')
+          name.setAttribute('class', 'contacts-list-name')
+          name.textContent = contact.name
+          info.appendChild(name)
+
+          if (contact.org) {
+            var org = document.createElement('div')
+            org.setAttribute('class', 'contacts-list-org')
+            org.textContent = contact.org
+            info.appendChild(org)
+          }
+
+          li.appendChild(info)
+          list.appendChild(li)
+        })
+      })
+
+      listContainer.appendChild(list)
+      sidebar.appendChild(listContainer)
+
+      var toolbar = document.createElement('div')
+      toolbar.setAttribute('class', 'contacts-toolbar')
+      toolbar.setAttribute('role', 'toolbar')
+      toolbar.setAttribute('aria-label', 'Contact actions')
+
+      var addBtn = document.createElement('button')
+      addBtn.setAttribute('class', 'contacts-add-btn')
+      addBtn.setAttribute('type', 'button')
+      addBtn.innerHTML = '<span aria-hidden="true">+</span> Add Contact'
+      toolbar.appendChild(addBtn)
+
+      sidebar.appendChild(toolbar)
+      div.appendChild(sidebar)
+
+      // Detail Panel
+      var detail = document.createElement('main')
+      detail.setAttribute('class', 'contacts-detail')
+      detail.setAttribute('aria-label', 'Contact details')
+
+      if (selectedContact) {
+        var contact = contacts.find(function (c) { return c.id === selectedContact })
+        if (contact) {
+          var detailHeader = document.createElement('header')
+          detailHeader.setAttribute('class', 'contacts-detail-header')
+
+          var detailAvatar = document.createElement('div')
+          detailAvatar.setAttribute('class', 'contacts-detail-avatar')
+          detailAvatar.setAttribute('role', 'img')
+          detailAvatar.setAttribute('aria-label', 'Avatar for ' + contact.name)
+          detailAvatar.textContent = getInitial(contact.name)
+          detailHeader.appendChild(detailAvatar)
+
+          var titleDiv = document.createElement('div')
+          titleDiv.setAttribute('class', 'contacts-detail-title')
+
+          var detailName = document.createElement('h2')
+          detailName.setAttribute('class', 'contacts-detail-name')
+          detailName.textContent = contact.name
+          titleDiv.appendChild(detailName)
+
+          if (contact.org) {
+            var detailOrg = document.createElement('p')
+            detailOrg.setAttribute('class', 'contacts-detail-org')
+            detailOrg.textContent = contact.org
+            titleDiv.appendChild(detailOrg)
+          }
+
+          detailHeader.appendChild(titleDiv)
+
+          var actions = document.createElement('div')
+          actions.setAttribute('class', 'contacts-detail-actions')
+          var editBtn = document.createElement('button')
+          editBtn.setAttribute('class', 'contacts-action-btn secondary')
+          editBtn.setAttribute('type', 'button')
+          editBtn.textContent = 'Edit'
+          actions.appendChild(editBtn)
+          detailHeader.appendChild(actions)
+          detail.appendChild(detailHeader)
+
+          var fields = document.createElement('dl')
+          fields.setAttribute('class', 'contacts-fields')
+
+          var emailGroup = document.createElement('div')
+          emailGroup.setAttribute('class', 'contacts-field-group')
+          var emailLabel = document.createElement('dt')
+          emailLabel.setAttribute('class', 'contacts-field-label')
+          emailLabel.textContent = 'Email'
+          emailGroup.appendChild(emailLabel)
+          var emailValue = document.createElement('dd')
+          emailValue.setAttribute('class', 'contacts-field-value')
+          var emailLink = document.createElement('a')
+          emailLink.setAttribute('href', 'mailto:' + contact.email)
+          emailLink.textContent = contact.email
+          emailValue.appendChild(emailLink)
+          emailGroup.appendChild(emailValue)
+          fields.appendChild(emailGroup)
+
+          var phoneGroup = document.createElement('div')
+          phoneGroup.setAttribute('class', 'contacts-field-group')
+          var phoneLabel = document.createElement('dt')
+          phoneLabel.setAttribute('class', 'contacts-field-label')
+          phoneLabel.textContent = 'Phone'
+          phoneGroup.appendChild(phoneLabel)
+          var phoneValue = document.createElement('dd')
+          phoneValue.setAttribute('class', 'contacts-field-value')
+          var phoneLink = document.createElement('a')
+          phoneLink.setAttribute('href', 'tel:' + contact.phone.replace(/\s/g, ''))
+          phoneLink.textContent = contact.phone
+          phoneValue.appendChild(phoneLink)
+          phoneGroup.appendChild(phoneValue)
+          fields.appendChild(phoneGroup)
+
+          if (contact.webId) {
+            var webIdGroup = document.createElement('div')
+            webIdGroup.setAttribute('class', 'contacts-field-group')
+            var webIdLabel = document.createElement('dt')
+            webIdLabel.setAttribute('class', 'contacts-field-label')
+            webIdLabel.textContent = 'WebID'
+            webIdGroup.appendChild(webIdLabel)
+            var webIdValue = document.createElement('dd')
+            webIdValue.setAttribute('class', 'contacts-field-value')
+            var webIdLink = document.createElement('a')
+            webIdLink.setAttribute('href', contact.webId)
+            webIdLink.textContent = contact.webId
+            webIdValue.appendChild(webIdLink)
+            webIdGroup.appendChild(webIdValue)
+            fields.appendChild(webIdGroup)
+          }
+
+          detail.appendChild(fields)
+        }
+      } else {
+        var emptyDiv = document.createElement('div')
+        emptyDiv.setAttribute('class', 'contacts-detail-empty')
+        emptyDiv.textContent = 'Select a contact to view details'
+        detail.appendChild(emptyDiv)
+      }
+
+      div.appendChild(detail)
+      return div
+    }
+
+    function renderCurrent () {
+      var body = document.getElementById('paneBody')
+      body.innerHTML = ''
+      body.appendChild(renderContacts())
+
+      body.querySelectorAll('[data-group]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          selectedGroup = this.getAttribute('data-group')
+          selectedContact = null
+          renderCurrent()
+        })
+      })
+
+      body.querySelectorAll('[data-contact]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          selectedContact = parseInt(this.getAttribute('data-contact'))
+          renderCurrent()
+        })
+      })
+    }
+
+    renderCurrent()
+  </script>
+</body>
+</html>
